@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <iterator>
 #include <set>
+#include <map>
 #include <sstream>
 
 #include <iostream>
@@ -345,35 +346,35 @@ void Wiz::DrawScore()
     DrawRectangle(topleft, 100, startPoint.y - topleft.y - FontHeight, teamColors[team][0]);
   }
   */
-
-  Coordinate startPoint(DrawWrapper::GetSize().x - 100, DrawWrapper::GetSize().y - ships.size() * (FontHeight + 1) + FontHeight / 2);
+  const int scoreBoardWidth = 100;
+  Coordinate startPoint(DrawWrapper::GetSize().x - scoreBoardWidth,
+                        DrawWrapper::GetSize().y - ships.size() * (FontHeight + 1) + FontHeight / 2);
   if (100 < startPoint.x)
   {
     if (0 > startPoint.y)
     {
       startPoint.y = FontHeight;
     }
-    std::ostringstream ostr;
 
-    int team = ships.front()->GetTeam();
-    Coordinate topleft = startPoint - Coordinate(1, FontHeight);
+    std::multimap<int,Hitable*> sortedScores;
     for (unsigned i = 0; i < ships.size(); ++i)
     {
-      ostr << scores[i] << ": " << ships[i]->GetName();
-      DrawWrapper::DrawText(ostr.str(), startPoint, Colors::pink);
+      sortedScores.insert( std::pair<int,Hitable*>( scores[i], ships[i] ) );
+    }
+
+    std::ostringstream ostr;
+    Coordinate topleft = startPoint - Coordinate(1, FontHeight);
+    for (std::multimap<int,Hitable*>::reverse_iterator it = sortedScores.rbegin();
+         sortedScores.rend() != it;
+         ++it )
+    {
+      ostr << it->first << ": " << it->second->GetName();
+      DrawWrapper::DrawText(ostr.str(), startPoint, teamColors[it->second->GetTeam()-1][0]);
       startPoint += Coordinate(0, FontHeight + 1);
       ostr.str("");
       ostr.clear();
-
-      if (ships[i]->GetTeam() != team)
-      {
-        DrawRectangle(topleft, 100, startPoint.y - topleft.y - FontHeight * 2, teamColors[team][0]);
-
-        team = ships[i]->GetTeam();
-        topleft = startPoint - Coordinate(1, FontHeight * 2);
-      }
     }
-    DrawRectangle(topleft, 100, startPoint.y - topleft.y - FontHeight, teamColors[team][0]);
+    DrawRectangle(topleft, scoreBoardWidth, startPoint.y - topleft.y - FontHeight, Colors::purple);
   }
 }
 
