@@ -49,12 +49,15 @@ utility.o: utility.cpp drawinterface.hpp flyerz.hpp
 ais.o: ais.cpp drawinterface.hpp flyerz.hpp ais.hpp
 	$(CPP) -c $(INCLUDES) $(DEFS) $(CFLAGS)  $<
 
+skeleton.o: skeleton.cpp skeleton.hpp
+	$(CPP) -fPIC -c $(INCLUDES) $(DEFS) $(CFLAGS)  $<
+
 %o: %cpp
 
 LIB_WIZAI = libwizai.so
 OBJ_WIZAI = skeleton.o
 wizai: $(OBJ_WIZAI)
-	$(CPP) -shared -fPIC $(OBJ_WIZAI) -o $(LIB_WIZAI)
+	$(CPP) -shared $(OBJ_WIZAI) -o $(LIB_WIZAI)
 
 clean:
 	$(RM) *.o $(EXE) core $(LIB_WIZAI)
