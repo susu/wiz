@@ -14,6 +14,7 @@
 #include "ais.hpp"
 
 #include <climits>
+#include <cassert>
 #include <algorithm>
 #include <iterator>
 #include <set>
@@ -64,7 +65,14 @@ void Wiz::Init(const Options& options)
 
   for (std::vector<int>::const_iterator tit = options.teams.begin(); options.teams.end() != tit; ++tit)
   {
-    teamScores.push_back(ScoreSorter());
+    // needs to be preallocated, because later we playing with pointers to vector-elements
+    scores.resize( scores.size() + *tit, 0 );
+  }
+
+  const size_t VEC_SIZE = scores.size();
+  for (std::vector<int>::const_iterator tit = options.teams.begin(); options.teams.end() != tit; ++tit)
+  {
+    // teamScores.push_back(ScoreSorter());
     for (int i = 0; i < *tit; ++i)
     {
       std::string name = *nit++;
@@ -99,11 +107,12 @@ void Wiz::Init(const Options& options)
       }
       shipPtr->SetAi(aiPtr);
       ships.push_back(shipPtr);
-      scores.push_back(0);
-      teamScores.back().insert(ScoreType(&scores[i+1], ships.back()));
+      // teamScores.back().insert(ScoreType(&scores[i+1], ships.back()));
+      m_scoreBoard.add(ScoreType(&scores[id-1], ships.back()));
     }
     ++teamCounter;
   }
+  assert( VEC_SIZE == scores.size() ); // otherwise the pointers will be invalidated
 
 //  scores = ScoreList(ships.size(), 0);
 }
@@ -166,6 +175,7 @@ bool Wiz::CheckCollision(const Coordinate& begin, const Coordinate& end, int tea
         std::cout << "Score limit hit\n";
         ShutDown();
       }
+      m_scoreBoard.updateShip( owner );
       hit = true;
       break;
     }
@@ -356,20 +366,14 @@ void Wiz::DrawScore()
       startPoint.y = FontHeight;
     }
 
-    std::multimap<int,Hitable*> sortedScores;
-    for (unsigned i = 0; i < ships.size(); ++i)
-    {
-      sortedScores.insert( std::pair<int,Hitable*>( scores[i], ships[i] ) );
-    }
-
     std::ostringstream ostr;
     Coordinate topleft = startPoint - Coordinate(1, FontHeight);
-    for (std::multimap<int,Hitable*>::reverse_iterator it = sortedScores.rbegin();
-         sortedScores.rend() != it;
-         ++it )
+    for (ScoreBoard::Iterator it = m_scoreBoard.begin();
+         m_scoreBoard.end() != it;
+         ++it)
     {
-      ostr << it->first << ": " << it->second->GetName();
-      DrawWrapper::DrawText(ostr.str(), startPoint, teamColors[it->second->GetTeam()-1][0]);
+      ostr << it->GetScore() << ": " << it->GetName();
+      DrawWrapper::DrawText(ostr.str(), startPoint, teamColors[it->GetShip()->GetTeam()-1][0]);
       startPoint += Coordinate(0, FontHeight + 1);
       ostr.str("");
       ostr.clear();
@@ -435,7 +439,49 @@ std::string ScoreType::GetName() const
   return m_ship->GetName();
 }
 
+const Hitable* ScoreType::GetShip() const
+{
+  return m_ship;
+}
+
 bool operator<(const ScoreType& lhs, const ScoreType& rhs)
 {
   return lhs.GetScore() > rhs.GetScore();
+}
+
+bool operator<=(const ScoreType& lhs, const ScoreType& rhs)
+{
+  return lhs.GetScore() <= rhs.GetScore();
+}
+
+//
+// ScoreBoard functions
+//
+
+ScoreBoard::ScoreBoard()
+{
+}
+
+void ScoreBoard::updateShip(int shipIndex)
+{
+  SortedScoreList::iterator changedShip = m_shipIterators[shipIndex];
+  SortedScoreList::iterator it = std::find_if(m_scoreList.begin(), changedShip,
+                                              std::bind2nd(std::less_equal<ScoreType>(), *changedShip));
+  m_scoreList.splice(it, m_scoreList, changedShip); // move 'changedShip' before 'it'
+}
+
+void ScoreBoard::add(ScoreType s)
+{
+  m_scoreList.push_back(s);
+  m_shipIterators.push_back(--m_scoreList.end());
+}
+
+ScoreBoard::Iterator ScoreBoard::begin()
+{
+  return m_scoreList.begin();
+}
+
+ScoreBoard::Iterator ScoreBoard::end()
+{
+  return m_scoreList.end();
 }

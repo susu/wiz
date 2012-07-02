@@ -20,6 +20,7 @@
 
 #include <vector>
 #include <set>
+#include <list>
 #include <ctime>
 
 class Options;
@@ -34,6 +35,7 @@ class ScoreType
     {}
     int GetScore() const;
     std::string GetName() const;
+    const Hitable* GetShip() const;
 
   private:
     int*      m_score;
@@ -42,6 +44,27 @@ class ScoreType
 
 //inverse ordering instead of using rbegin/rend
 bool operator<(const ScoreType& lhs, const ScoreType& rhs);
+
+// needed for less_equal
+bool operator<=(const ScoreType& lhs, const ScoreType& rhs);
+
+class ScoreBoard
+{
+  public:
+    typedef std::list<ScoreType> SortedScoreList;
+    typedef SortedScoreList::const_iterator Iterator;
+
+    ScoreBoard();
+    void updateShip( int shipIndex );
+    void add( ScoreType s );
+
+    Iterator begin();
+    Iterator end();
+
+  private:
+    SortedScoreList m_scoreList;
+    std::vector< SortedScoreList::iterator > m_shipIterators;
+};
 
 class Wiz
 {
@@ -75,9 +98,10 @@ class Wiz
     ProjectileList projectiles;
     typedef std::vector<int> ScoreList;
     mutable ScoreList scores;
-    typedef std::set<ScoreType> ScoreSorter;
-    typedef std::vector<ScoreSorter> TeamScoreList;
-    TeamScoreList teamScores;
+    // typedef std::set<ScoreType> ScoreSorter;
+    // typedef std::vector<ScoreSorter> TeamScoreList;
+    // TeamScoreList teamScores;
+    mutable ScoreBoard m_scoreBoard;
 
     ProjectileList deads;
 
